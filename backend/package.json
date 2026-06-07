@@ -7,7 +7,8 @@
     "@types/bun": "latest",
     "@types/express": "^5.0.6",
     "@types/node": "^25.9.2",
-    "@types/ws": "^8.18.1"
+    "@types/ws": "^8.18.1",
+    "prisma": "^7.8.0"
   },
   "peerDependencies": {
     "typescript": "^6.0.3"
@@ -17,8 +18,11 @@
     "start": "bun src/index.ts"
   },
   "dependencies": {
+    "@prisma/client": "^7.8.0",
+    "bcryptjs": "^3.0.3",
     "express": "^5.2.1",
     "ioredis": "^5.11.1",
-    "ws": "^8.21.0"
+    "ws": "^8.21.0",
+    "zod": "^4.4.3"
   }
 }
