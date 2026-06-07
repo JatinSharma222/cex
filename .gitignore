@@ -1,0 +1,16 @@
+# OS
+.DS_Store          # already in backend, but good at root level for engine/frontend too
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/             # already in backend, but covers engine/frontend too
+
+# Environment files (shared safety net)
+.env
+.env.local
+.env.*.local
+
+# Logs (shared)
+*.log
+logs/
