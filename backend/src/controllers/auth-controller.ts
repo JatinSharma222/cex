@@ -1,7 +1,8 @@
 import bcrypt from "bcryptjs";
-import { Request, Response } from "express";
+import type { Request, Response } from "express";
 import { prisma } from "../db";
 import { authSchema } from "../types/auth_schema";
+import { sendValidationError } from "../utils/validation";
 
 export async function signup(req:Request, res: Response): Promise<void> {
     const parsedBody = authSchema.safeParse(req.body);
