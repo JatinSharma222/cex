@@ -1,8 +1,10 @@
 import bcrypt from "bcryptjs";
 import type { Request, Response } from "express";
 import { prisma } from "../db";
+import { createToken } from "../utils/auth.js";
 import { authSchema } from "../types/auth_schema";
 import { sendValidationError } from "../utils/validation";
+import { PrismaClientKnownRequestError } from "@prisma/client/runtime/client";
 
 export async function signup(req:Request, res: Response): Promise<void> {
     const parsedBody = authSchema.safeParse(req.body);
@@ -28,9 +30,17 @@ export async function signup(req:Request, res: Response): Promise<void> {
             userId: user.id,
             username: user.username,
         });
-    } catch (error) {
-        res.status(409).json({ error: "username already exists"
-        })
+    } catch (error: unknown) {
+        console.error("Signup failed:", error);
+
+        if (error instanceof PrismaClientKnownRequestError && error.code === "P2002") {
+            res.status(409).json({ error: "username already exists" });
+            return;
+        }
+
+        res.status(500).json({
+            error: error instanceof Error ? error.message : "Failed to create user",
+        });
     }
 }
 
