@@ -93,4 +93,24 @@ export async function getOrder(req: Request, res: Response): Promise<void> {
   );
 }
 
-export function cancelOrder() {}
+export async function cancelOrder(req: Request, res: Response): Promise<void> {
+  const parsedParams = orderIdParamSchema.safeParse(req.params);
+  if (!parsedParams.success) {
+    sendValidationError(res, parsedParams.error);
+    return;
+  }
+
+  const { orderId } = parsedParams.data;
+  const engineResponse = await sendToEngine("cancel_order", {
+    userId: getUserId(req),
+    orderId,
+  });
+
+  res.status(engineResponse.ok ? 200 : 400).json(
+    engineResponse.ok
+      ? engineResponse.data
+      : {
+          error: engineResponse.error,
+        },
+  );
+}
