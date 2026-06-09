@@ -13,41 +13,52 @@ function getUserId(req: Request): string {
 }
 
 export async function createOrder(req: Request, res: Response): Promise<void> {
-    const userId = getUserId(req);
-    const parsedBody = orderBodySchema.safeParse(req.body);
-     if (!parsedBody.success) {
-        sendValidationError(res, parsedBody.error);
-        return;
-    }
-    
-    const { type, side, symbol, qty } = parsedBody.data;
-    const price = type === "market" ? null : parsedBody.data.price;
+  const userId = getUserId(req);
+  const parsedBody = orderBodySchema.safeParse(req.body);
+  if (!parsedBody.success) {
+    sendValidationError(res, parsedBody.error);
+    return;
+  }
 
-    const engineResponse = await sendToEngine("create_order", {
-        userId, 
-        type,
-        side,
-        symbol,
-        qty,
-        price: type === "market" ? null : price,
-    });
+  const { type, side, symbol, qty } = parsedBody.data;
+  const price = type === "market" ? null : parsedBody.data.price;
 
-    res.status(engineResponse.ok ? 200 : 400).json(engineResponse.ok ? engineResponse.data : { error: engineResponse.error });
+  const engineResponse = await sendToEngine("create_order", {
+    userId,
+    type,
+    side,
+    symbol,
+    qty,
+    price: type === "market" ? null : price,
+  });
+
+  res
+    .status(engineResponse.ok ? 200 : 400)
+    .json(
+      engineResponse.ok ? engineResponse.data : { error: engineResponse.error },
+    );
 }
 
-export function getDepth(){
+export async function getDepth(req: Request, res: Response): Promise<void> {
+  const parsedParams = symbolParamSchema.safeParse(req.params);
+  if (!parsedParams.success) {
+    sendValidationError(res, parsedParams.error);
+    return;
+  }
 
+  const { symbol } = parsedParams.data;
+
+  const engineResponse = await sendToEngine("get_depth", { symbol });
+
+  res
+    .status(engineResponse.ok ? 200 : 400)
+    .json(
+      engineResponse.ok ? engineResponse.data : { error: engineResponse.error },
+    );
 }
 
-export function getBalance(){
+export function getBalance() {}
 
-}
+export function getOrder() {}
 
-export function getOrder(){
-
-}
-
-export function cancelOrder(){
-
-}
-
+export function cancelOrder() {}
