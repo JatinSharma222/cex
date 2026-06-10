@@ -23,3 +23,10 @@ impl PriceLevel {
         self.orders.is_empty()
     }
 }
+
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct OrderBookDepth {
+    pub bids: Vec<[f64; 2]>, 
+    pub asks: Vec<[f64; 2]>,
+}
