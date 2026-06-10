@@ -103,3 +103,23 @@ impl Trade {
         }
     }
 }
+
+// Engine  Request (coming from backend via Redis)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EngineRequest {
+    pub correlation_id: String,
+    pub reqponse_queue: String,
+    pub r#type: String,
+    pub payload: serde_json::Value,
+}
+
+// Engine Response (sent back to backend via Redis)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EngineResponse {
+    pub correlation_id: String,
+    pub success: bool,
+    pub data: Option<serde_json::Value>,
+    pub error: Option<String>,
+}
