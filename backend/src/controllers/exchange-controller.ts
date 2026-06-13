@@ -33,9 +33,9 @@ export async function createOrder(req: Request, res: Response): Promise<void> {
   });
 
   res
-    .status(engineResponse.ok ? 200 : 400)
+    .status(engineResponse.success ? 200 : 400)
     .json(
-      engineResponse.ok ? engineResponse.data : { error: engineResponse.error },
+      engineResponse.success ? engineResponse.data : { error: engineResponse.error },
     );
 }
 
@@ -51,19 +51,19 @@ export async function getDepth(req: Request, res: Response): Promise<void> {
   const engineResponse = await sendToEngine("get_depth", { symbol });
 
   res
-    .status(engineResponse.ok ? 200 : 400)
+    .status(engineResponse.success ? 200 : 400)
     .json(
-      engineResponse.ok ? engineResponse.data : { error: engineResponse.error },
+      engineResponse.success ? engineResponse.data : { error: engineResponse.error },
     );
 }
 
 export async function getBalance(req: Request, res: Response): Promise<void> {
-  const engineResponse = await sendToEngine("get_user_balance", {
+  const engineResponse = await sendToEngine("get_balance", {
     userId: getUserId(req),
   });
 
-  res.status(engineResponse.ok ? 200 : 400).json(
-    engineResponse.ok
+  res.status(engineResponse.success ? 200 : 400).json(
+    engineResponse.success
       ? engineResponse.data
       : {
           error: engineResponse.error,
@@ -84,8 +84,8 @@ export async function getOrder(req: Request, res: Response): Promise<void> {
     orderId,
   });
 
-  res.status(engineResponse.ok ? 200 : 400).json(
-    engineResponse.ok
+  res.status(engineResponse.success ? 200 : 400).json(
+    engineResponse.success
       ? engineResponse.data
       : {
           error: engineResponse.error,
@@ -106,8 +106,8 @@ export async function cancelOrder(req: Request, res: Response): Promise<void> {
     orderId,
   });
 
-  res.status(engineResponse.ok ? 200 : 400).json(
-    engineResponse.ok
+  res.status(engineResponse.success ? 200 : 400).json(
+    engineResponse.success
       ? engineResponse.data
       : {
           error: engineResponse.error,

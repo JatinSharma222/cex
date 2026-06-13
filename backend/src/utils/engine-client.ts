@@ -30,6 +30,21 @@ export async function pingRedis(): Promise<string>  {
     return publisher.ping();
 }
 
+export function subscribeToEngineUpdates(
+  callback: (channel: string, data: unknown) => void
+): void {
+  subscriber.psubscribe("orderbook:*", "trades:*");
+
+  subscriber.on("pmessage", (_pattern, channel, message) => {
+    try {
+      const data = JSON.parse(message);
+      callback(channel, data);
+    } catch (e) {
+      console.error("Failed to parse engine update:", e);
+    }
+  });
+}
+
 export async function sendToEngine(
   type: EngineCommandType,
   payload: Record<string, unknown>,
@@ -56,7 +71,7 @@ export async function listenForEngineResponse(): Promise<void> {
         if (!response) continue;
 
         try {
-            const parsedResponse = JSON.parse(response.element) as EngineResponse;
+            const parsedResponse = JSON.parse(response[1]) as EngineResponse;
             resolveEngineResponse(parsedResponse);
         } catch (error) {
             console.error("Invalid engine response", error);

@@ -1,7 +1,7 @@
 export type EngineCommandType =
   | "place_order"
   | "get_depth"
-  | "get_user_balance"
+  | "get_balance"        
   | "get_order"
   | "cancel_order";
 
@@ -14,7 +14,7 @@ export interface EngineRequest {
 
 export interface EngineResponse {
   correlationId: string;
-  ok: boolean;
+  success: boolean;      
   data?: unknown;
   error?: string;
 }
