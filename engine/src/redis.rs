@@ -5,7 +5,17 @@ pub struct RedisClient {
     pub connection: Connection,
 }
 
-impl RedisClient {                         
+impl RedisClient {
+
+    pub fn publish(&mut self, channel: &str, data: serde_json::Value) {
+    let payload = serde_json::to_string(&data)
+        .expect("Failed to serialize publish payload");
+
+    let _: () = self.connection
+        .publish(channel, payload)
+        .expect("Failed to publish to channel");
+}
+
     pub fn new(redis_url: &str) -> Self {
         let client = Client::open(redis_url).expect("Failed to connect to Redis");
         let connection = client
