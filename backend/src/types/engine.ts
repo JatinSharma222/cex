@@ -1,5 +1,5 @@
 export type EngineCommandType =
-  | "create_order"
+  | "place_order"
   | "get_depth"
   | "get_user_balance"
   | "get_order"

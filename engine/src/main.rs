@@ -8,7 +8,7 @@ mod error;
 use std::thread;
 use std::sync::mpsc;
 use std::collections::HashMap;
-use models::{TradingPair, EngineRequest};
+use models::{EngineRequest, EngineState, TradingPair};
 use orderbook::OrderBook;
 use redis::RedisClient;
 use handlers::handle_request;
@@ -24,9 +24,7 @@ fn main() {
     let incoming_queue = std::env::var("INCOMING_QUEUE")
         .unwrap_or_else(|_| "backend-to-engine-broker".to_string());
 
-
     let mut senders: HashMap<String, mpsc::Sender<EngineRequest>> = HashMap::new();
-
 
     for pair in TradingPair::iter() {
         let (tx, rx) = mpsc::channel::<EngineRequest>();
@@ -38,15 +36,14 @@ fn main() {
             println!("Matching engine ready for {}", pair);
 
             let mut orderbook = OrderBook::new(pair.clone());
+            let mut state = EngineState::new();
             let mut redis = RedisClient::new(&redis_url);
 
-
             while let Ok(request) = rx.recv() {
-                handle_request(request, &mut orderbook, &mut redis);
+                handle_request(request, &mut orderbook, &mut state, &mut redis);
             }
         });
     }
-
 
     let reader = thread::spawn(move || {
         let mut redis = RedisClient::new(&redis_url);

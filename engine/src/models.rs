@@ -3,6 +3,43 @@ use serde::{Deserialize, Serialize};
 use strum::{EnumIter, IntoEnumIterator};
 use strum_macros::Display;
 use uuid::Uuid;
+use std::collections::HashMap;
+
+
+
+#[derive(Debug, Clone)]
+pub struct EngineState {
+    pub orders: HashMap<String, Order>,       
+    pub balances: HashMap<String, UserBalance>, 
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UserBalance {
+    pub user_id: String,
+    pub usdt: f64,
+    pub btc: f64,
+    pub eth: f64,
+    pub sol: f64,
+}
+
+impl EngineState {
+    pub fn new() -> Self {
+        Self {
+            orders: HashMap::new(),
+            balances: HashMap::new(),
+        }
+    }
+
+    pub fn get_or_create_balance(&mut self, user_id: &str) -> &mut UserBalance {
+        self.balances.entry(user_id.to_string()).or_insert(UserBalance {
+            user_id: user_id.to_string(),
+            usdt: 100_000.0, // starting balance for testing
+            btc: 10.0,
+            eth: 100.0,
+            sol: 1000.0,
+        })
+    }
+}
 
 #[derive(Debug, Clone, EnumIter, Display, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[allow(non_camel_case_types)]  

@@ -1,15 +1,22 @@
 use crate::matcher::Matcher;
-use crate::models::{EngineRequest, Order, OrderType, Side, TradingPair};
+use crate::models::{EngineRequest, EngineState, Order, OrderType, Side, TradingPair};
 use crate::orderbook::OrderBook;
 use crate::redis::RedisClient;
 use serde_json::json;
 
-pub fn handle_request(request: EngineRequest, orderbook: &mut OrderBook, redis: &mut RedisClient) {
+pub fn handle_request(
+    request: EngineRequest,
+    orderbook: &mut OrderBook,
+    state: &mut EngineState,
+    redis: &mut RedisClient,
+) {
     match request.r#type.as_str() {
-        "place_order" => handle_place_order(request, orderbook, redis),
-        "cancel_order" => handle_cancel_order(request, orderbook, redis),
-        "get_depth" => handle_get_depth(request, orderbook, redis),
-        "get_ticker" => handle_get_ticker(request, orderbook, redis),
+        "place_order"  => handle_place_order(request, orderbook, state, redis),
+        "cancel_order" => handle_cancel_order(request, orderbook, state, redis),
+        "get_depth"    => handle_get_depth(request, orderbook, redis),
+        "get_ticker"   => handle_get_ticker(request, orderbook, redis),
+        "get_order"    => handle_get_order(request, state, redis),
+        "get_balance"  => handle_get_balance(request, state, redis),
         _ => {
             redis.send_error(
                 &request.correlation_id,
@@ -20,17 +27,18 @@ pub fn handle_request(request: EngineRequest, orderbook: &mut OrderBook, redis: 
     }
 }
 
-fn handle_place_order(request: EngineRequest, orderbook: &mut OrderBook, redis: &mut RedisClient) {
+fn handle_place_order(
+    request: EngineRequest,
+    orderbook: &mut OrderBook,
+    state: &mut EngineState,
+    redis: &mut RedisClient,
+) {
     let payload = &request.payload;
 
     let user_id = match payload["userId"].as_str() {
         Some(v) => v.to_string(),
         None => {
-            redis.send_error(
-                &request.correlation_id,
-                &request.response_queue,
-                "missing userId",
-            );
+            redis.send_error(&request.correlation_id, &request.response_queue, "missing userId");
             return;
         }
     };
@@ -38,37 +46,25 @@ fn handle_place_order(request: EngineRequest, orderbook: &mut OrderBook, redis: 
     let symbol = match payload["symbol"].as_str() {
         Some(v) => v.to_string(),
         None => {
-            redis.send_error(
-                &request.correlation_id,
-                &request.response_queue,
-                "missing symbol",
-            );
+            redis.send_error(&request.correlation_id, &request.response_queue, "missing symbol");
             return;
         }
     };
 
     let side = match payload["side"].as_str() {
-        Some("buy") => Side::Buy,
+        Some("buy")  => Side::Buy,
         Some("sell") => Side::Sell,
         _ => {
-            redis.send_error(
-                &request.correlation_id,
-                &request.response_queue,
-                "invalid side",
-            );
+            redis.send_error(&request.correlation_id, &request.response_queue, "invalid side");
             return;
         }
     };
 
     let order_type = match payload["orderType"].as_str() {
-        Some("limit") => OrderType::Limit,
+        Some("limit")  => OrderType::Limit,
         Some("market") => OrderType::Market,
         _ => {
-            redis.send_error(
-                &request.correlation_id,
-                &request.response_queue,
-                "invalid orderType",
-            );
+            redis.send_error(&request.correlation_id, &request.response_queue, "invalid orderType");
             return;
         }
     };
@@ -78,11 +74,7 @@ fn handle_place_order(request: EngineRequest, orderbook: &mut OrderBook, redis: 
     let quantity = match payload["quantity"].as_f64() {
         Some(v) => v,
         None => {
-            redis.send_error(
-                &request.correlation_id,
-                &request.response_queue,
-                "missing quantity",
-            );
+            redis.send_error(&request.correlation_id, &request.response_queue, "missing quantity");
             return;
         }
     };
@@ -90,11 +82,7 @@ fn handle_place_order(request: EngineRequest, orderbook: &mut OrderBook, redis: 
     let trading_pair = match parse_trading_pair(&symbol) {
         Some(p) => p,
         None => {
-            redis.send_error(
-                &request.correlation_id,
-                &request.response_queue,
-                "invalid symbol",
-            );
+            redis.send_error(&request.correlation_id, &request.response_queue, "invalid symbol");
             return;
         }
     };
@@ -102,7 +90,7 @@ fn handle_place_order(request: EngineRequest, orderbook: &mut OrderBook, redis: 
     let mut order = Order::new(user_id, trading_pair, side, order_type, price, quantity);
     let trades = Matcher::process(&mut order, orderbook);
 
-    // publish updated orderbook to pub/sub
+    // publish updated orderbook
     let depth = orderbook.get_depth(20);
     redis.publish(&format!("orderbook:{}", symbol), json!(depth));
 
@@ -110,6 +98,9 @@ fn handle_place_order(request: EngineRequest, orderbook: &mut OrderBook, redis: 
     if !trades.is_empty() {
         redis.publish(&format!("trades:{}", symbol), json!(trades));
     }
+
+    // store order in state
+    state.orders.insert(order.id.clone(), order.clone());
 
     redis.send_success(
         &request.correlation_id,
@@ -124,21 +115,26 @@ fn handle_place_order(request: EngineRequest, orderbook: &mut OrderBook, redis: 
     );
 }
 
-fn handle_cancel_order(request: EngineRequest, orderbook: &mut OrderBook, redis: &mut RedisClient) {
+fn handle_cancel_order(
+    request: EngineRequest,
+    orderbook: &mut OrderBook,
+    state: &mut EngineState,
+    redis: &mut RedisClient,
+) {
     let order_id = match request.payload["orderId"].as_str() {
         Some(v) => v,
         None => {
-            redis.send_error(
-                &request.correlation_id,
-                &request.response_queue,
-                "missing orderId",
-            );
+            redis.send_error(&request.correlation_id, &request.response_queue, "missing orderId");
             return;
         }
     };
 
     match orderbook.cancel_order(order_id) {
         Some(order) => {
+            // update state to cancelled
+            if let Some(stored) = state.orders.get_mut(&order.id) {
+                stored.status = crate::models::OrderStatus::Cancelled;
+            }
             redis.send_success(
                 &request.correlation_id,
                 &request.response_queue,
@@ -149,28 +145,26 @@ fn handle_cancel_order(request: EngineRequest, orderbook: &mut OrderBook, redis:
             );
         }
         None => {
-            redis.send_error(
-                &request.correlation_id,
-                &request.response_queue,
-                "order not found",
-            );
+            redis.send_error(&request.correlation_id, &request.response_queue, "order not found");
         }
     }
 }
 
-fn handle_get_depth(request: EngineRequest, orderbook: &mut OrderBook, redis: &mut RedisClient) {
+fn handle_get_depth(
+    request: EngineRequest,
+    orderbook: &mut OrderBook,
+    redis: &mut RedisClient,
+) {
     let levels = request.payload["levels"].as_f64().unwrap_or(20.0) as usize;
-
     let depth = orderbook.get_depth(levels);
-
-    redis.send_success(
-        &request.correlation_id,
-        &request.response_queue,
-        json!(depth),
-    );
+    redis.send_success(&request.correlation_id, &request.response_queue, json!(depth));
 }
 
-fn handle_get_ticker(request: EngineRequest, orderbook: &mut OrderBook, redis: &mut RedisClient) {
+fn handle_get_ticker(
+    request: EngineRequest,
+    orderbook: &mut OrderBook,
+    redis: &mut RedisClient,
+) {
     redis.send_success(
         &request.correlation_id,
         &request.response_queue,
@@ -181,6 +175,72 @@ fn handle_get_ticker(request: EngineRequest, orderbook: &mut OrderBook, redis: &
                 (Some(bid), Some(ask)) => Some(ask - bid),
                 _ => None,
             }
+        }),
+    );
+}
+
+pub fn handle_get_order(
+    request: EngineRequest,
+    state: &EngineState,
+    redis: &mut RedisClient,
+) {
+    let order_id = match request.payload["orderId"].as_str() {
+        Some(v) => v,
+        None => {
+            redis.send_error(&request.correlation_id, &request.response_queue, "missing orderId");
+            return;
+        }
+    };
+
+    match state.orders.get(order_id) {
+        Some(order) => {
+            redis.send_success(
+                &request.correlation_id,
+                &request.response_queue,
+                json!({
+                    "orderId": order.id,
+                    "userId": order.user_id,
+                    "symbol": order.trading_pair.to_string(),
+                    "side": format!("{:?}", order.side),
+                    "orderType": format!("{:?}", order.order_type),
+                    "price": order.price,
+                    "quantity": order.quantity,
+                    "filled": order.filled,
+                    "remaining": order.remaining(),
+                    "status": format!("{:?}", order.status),
+                }),
+            );
+        }
+        None => {
+            redis.send_error(&request.correlation_id, &request.response_queue, "order not found");
+        }
+    }
+}
+
+pub fn handle_get_balance(
+    request: EngineRequest,
+    state: &mut EngineState,
+    redis: &mut RedisClient,
+) {
+    let user_id = match request.payload["userId"].as_str() {
+        Some(v) => v.to_string(),
+        None => {
+            redis.send_error(&request.correlation_id, &request.response_queue, "missing userId");
+            return;
+        }
+    };
+
+    let balance = state.get_or_create_balance(&user_id);
+
+    redis.send_success(
+        &request.correlation_id,
+        &request.response_queue,
+        json!({
+            "userId": balance.user_id,
+            "usdt": balance.usdt,
+            "btc": balance.btc,
+            "eth": balance.eth,
+            "sol": balance.sol,
         }),
     );
 }

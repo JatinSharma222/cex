@@ -23,12 +23,12 @@ export async function createOrder(req: Request, res: Response): Promise<void> {
   const { type, side, symbol, qty } = parsedBody.data;
   const price = type === "market" ? null : parsedBody.data.price;
 
-  const engineResponse = await sendToEngine("create_order", {
+  const engineResponse = await sendToEngine("place_order", {
     userId,
     type,
     side,
     symbol,
-    qty,
+    quantity: qty,
     price: type === "market" ? null : price,
   });
 
