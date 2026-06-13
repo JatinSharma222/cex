@@ -12,3 +12,4 @@ uuid = { version = "1", features = ["v4"] }
 rust_decimal = "1"
 strum = { version = "0.26", features = ["derive"] }
 strum_macros = "0.26"
+dotenvy = "0.15"

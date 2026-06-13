@@ -1,26 +1,35 @@
+
 use serde::{Deserialize, Serialize};
 use strum::{EnumIter, IntoEnumIterator};
 use strum_macros::Display;
 use uuid::Uuid;
 
-
 #[derive(Debug, Clone, EnumIter, Display, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[allow(non_camel_case_types)]  
 pub enum TradingPair {
     BTC_USDT,
     ETH_USDT,
     SOL_USDT,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserilize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)] 
 pub enum Side {
     Buy,
     Sell,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]  
 pub enum OrderType {
     Limit,
     Market,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]  
+pub enum OrderStatus {
+    Open,
+    PartiallyFilled,
+    Filled,
+    Cancelled,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -67,20 +76,12 @@ impl Order {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub enum OrderStatus {
-    Open,
-    PartiallyFilled,
-    Filled,
-    Cancelled,
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Trade {
     pub id: String,
     pub trading_pair: TradingPair,
-    pub maker_order_id: String, // order that was already in the book
-    pub taker_order_id: String, // order that just came in
+    pub maker_order_id: String,
+    pub taker_order_id: String,
     pub price: f64,
     pub quantity: f64,
 }
@@ -104,17 +105,15 @@ impl Trade {
     }
 }
 
-// Engine  Request (coming from backend via Redis)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct EngineRequest {
     pub correlation_id: String,
-    pub reqponse_queue: String,
+    pub response_queue: String,  
     pub r#type: String,
     pub payload: serde_json::Value,
 }
 
-// Engine Response (sent back to backend via Redis)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct EngineResponse {
