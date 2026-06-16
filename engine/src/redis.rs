@@ -43,6 +43,7 @@ impl RedisClient {
     pub fn push_response(&mut self, queue: &str, response: &EngineResponse) {
         let payload = serde_json::to_string(response)
             .expect("Failed to serialize engine response");
+        println!("Pushing response to queue: {}", queue);
         let _: () = self.connection.lpush(queue, payload)
             .expect("Failed to push response");
     }

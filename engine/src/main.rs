@@ -65,7 +65,14 @@ fn main() {
                             }
                         }
                         None => {
-                            eprintln!("Unknown symbol: {}", symbol);
+                            // commands without symbol (get_balance, get_order)
+                            // route to BTC_USDT thread by default
+                            eprintln!("No symbol found for command '{}', routing to BTC_USDT", request.r#type);
+                            if let Some(tx) = senders.get("BTC_USDT") {
+                                if let Err(e) = tx.send(request) {
+                                    eprintln!("Failed to route to default thread: {}", e);
+                                }
+                            }
                         }
                     }
                 }

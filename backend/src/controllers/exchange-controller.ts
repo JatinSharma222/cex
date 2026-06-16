@@ -23,20 +23,25 @@ export async function createOrder(req: Request, res: Response): Promise<void> {
   const { type, side, symbol, qty } = parsedBody.data;
   const price = type === "market" ? null : parsedBody.data.price;
 
-  const engineResponse = await sendToEngine("place_order", {
-    userId,
-    type,
-    side,
-    symbol,
-    quantity: qty,
-    price: type === "market" ? null : price,
-  });
+  try {
+    const engineResponse = await sendToEngine("place_order", {
+      userId,
+      orderType: type,
+      side,
+      symbol,
+      quantity: qty,
+      price: type === "market" ? null : price,
+    });
 
-  res
-    .status(engineResponse.success ? 200 : 400)
-    .json(
-      engineResponse.success ? engineResponse.data : { error: engineResponse.error },
-    );
+    res
+      .status(engineResponse.success ? 200 : 400)
+      .json(
+        engineResponse.success ? engineResponse.data : { error: engineResponse.error },
+      );
+  } catch (error) {
+    console.error("createOrder engine error:", error);
+    res.status(504).json({ error: "Engine timeout" });
+  }
 }
 
 export async function getDepth(req: Request, res: Response): Promise<void> {
@@ -48,27 +53,37 @@ export async function getDepth(req: Request, res: Response): Promise<void> {
 
   const { symbol } = parsedParams.data;
 
-  const engineResponse = await sendToEngine("get_depth", { symbol });
+  try {
+    const engineResponse = await sendToEngine("get_depth", { symbol });
 
-  res
-    .status(engineResponse.success ? 200 : 400)
-    .json(
-      engineResponse.success ? engineResponse.data : { error: engineResponse.error },
-    );
+    res
+      .status(engineResponse.success ? 200 : 400)
+      .json(
+        engineResponse.success ? engineResponse.data : { error: engineResponse.error },
+      );
+  } catch (error) {
+    console.error("getDepth engine error:", error);
+    res.status(504).json({ error: "Engine timeout" });
+  }
 }
 
 export async function getBalance(req: Request, res: Response): Promise<void> {
-  const engineResponse = await sendToEngine("get_balance", {
-    userId: getUserId(req),
-  });
+  try {
+    const engineResponse = await sendToEngine("get_balance", {
+      userId: getUserId(req),
+    });
 
-  res.status(engineResponse.success ? 200 : 400).json(
-    engineResponse.success
-      ? engineResponse.data
-      : {
-          error: engineResponse.error,
-        },
-  );
+    res.status(engineResponse.success ? 200 : 400).json(
+      engineResponse.success
+        ? engineResponse.data
+        : {
+            error: engineResponse.error,
+          },
+    );
+  } catch (error) {
+    console.error("getBalance engine error:", error);
+    res.status(504).json({ error: "Engine timeout" });
+  }
 }
 
 export async function getOrder(req: Request, res: Response): Promise<void> {
@@ -79,18 +94,24 @@ export async function getOrder(req: Request, res: Response): Promise<void> {
   }
 
   const { orderId } = parsedParams.data;
-  const engineResponse = await sendToEngine("get_order", {
-    userId: getUserId(req),
-    orderId,
-  });
 
-  res.status(engineResponse.success ? 200 : 400).json(
-    engineResponse.success
-      ? engineResponse.data
-      : {
-          error: engineResponse.error,
-        },
-  );
+  try {
+    const engineResponse = await sendToEngine("get_order", {
+      userId: getUserId(req),
+      orderId,
+    });
+
+    res.status(engineResponse.success ? 200 : 400).json(
+      engineResponse.success
+        ? engineResponse.data
+        : {
+            error: engineResponse.error,
+          },
+    );
+  } catch (error) {
+    console.error("getOrder engine error:", error);
+    res.status(504).json({ error: "Engine timeout" });
+  }
 }
 
 export async function cancelOrder(req: Request, res: Response): Promise<void> {
@@ -101,16 +122,22 @@ export async function cancelOrder(req: Request, res: Response): Promise<void> {
   }
 
   const { orderId } = parsedParams.data;
-  const engineResponse = await sendToEngine("cancel_order", {
-    userId: getUserId(req),
-    orderId,
-  });
 
-  res.status(engineResponse.success ? 200 : 400).json(
-    engineResponse.success
-      ? engineResponse.data
-      : {
-          error: engineResponse.error,
-        },
-  );
+  try {
+    const engineResponse = await sendToEngine("cancel_order", {
+      userId: getUserId(req),
+      orderId,
+    });
+
+    res.status(engineResponse.success ? 200 : 400).json(
+      engineResponse.success
+        ? engineResponse.data
+        : {
+            error: engineResponse.error,
+          },
+    );
+  } catch (error) {
+    console.error("cancelOrder engine error:", error);
+    res.status(504).json({ error: "Engine timeout" });
+  }
 }

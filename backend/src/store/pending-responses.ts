@@ -28,7 +28,10 @@ export function waitForEngineResponse(
 
 export function resolveEngineResponse(response: EngineResponse): void {
   const pending = pendingResponses.get(response.correlationId);
-  if (!pending) return;
+  if (!pending) {
+    console.warn(`No pending handler for correlationId: ${response.correlationId} (may have already timed out)`);
+    return;
+  }
 
   clearTimeout(pending.timeout);
   pendingResponses.delete(response.correlationId);

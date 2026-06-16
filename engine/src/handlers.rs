@@ -10,6 +10,7 @@ pub fn handle_request(
     state: &mut EngineState,
     redis: &mut RedisClient,
 ) {
+    println!("Received command: {} for correlationId: {}", request.r#type, request.correlation_id);
     match request.r#type.as_str() {
         "place_order"  => handle_place_order(request, orderbook, state, redis),
         "cancel_order" => handle_cancel_order(request, orderbook, state, redis),

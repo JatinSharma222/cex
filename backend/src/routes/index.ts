@@ -4,5 +4,5 @@ import { exchangeRouter } from "./exchange_routes";
 
 export const appRouter = Router();
 
-appRouter.use(authRouter);
-appRouter.use(exchangeRouter);
+appRouter.use("/auth", authRouter);
+appRouter.use("/exchange", exchangeRouter);
